@@ -5,13 +5,14 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const NODES = ['进入','画像确认','匹配完成','看政策','选定政策','准备材料','办理指引','前往官方平台'];
 const CODES = Object.fromEntries(
-  ['画像放弃','查不到企业','无匹配结果','地区未覆盖','结果不吸引','生成失败','链接失效','低满意度']
+  ['画像放弃','查不到企业','无匹配结果','地区未覆盖','结果不吸引','生成失败','链接失效','低满意度','数据缺口']
     .map((v,i)=>['P'+String(i+1).padStart(2,'0'),v])
-    .concat(['专利不足','软著不足','研发条件不足','缺少资质','材料写不出','不会办理','未注册企业','通过率过低','缺体系认证','经营异常']
+    .concat(['专利不足','软著不足','研发条件不足','缺少资质','材料写不出','不会办理','未注册企业','通过率过低','缺体系认证','经营异常','申报窗口未到','规模或营收不达标']
       .map((v,i)=>['B'+String(i+1).padStart(2,'0'),v])));
 const REQUIRED = '企业名称、所在地区、所属行业（国标代码）、企业规模、成立年限、企业类型、画像完整度、首次使用时间、最近使用时间、会话数、用过的功能、最远节点、卡点节点、卡点编码、主要缺口、推荐类目、推荐服务（服务名｜服务 ID）、长期培育候选、意向等级、触达授权、联系手机号、跟进人、跟进日期、跟进结果、成交服务、成交金额（元）'.split('、');
-const FEATURES = [['企业画像','画像',['画像确认']],['政策匹配','匹配',['匹配完成']],['政策解读','解读',['查看政策详情']],['企业诊断','诊断',['诊断生成']],['申报材料','材料',['材料上传','材料智能生成']],['办理指引','指引',['进入办理指引']],['跳转官方平台','跳转',['确认跳转']]];
+const FEATURES = [['企业画像','画像',['画像确认']],['政策匹配','匹配',['匹配完成']],['政策解读','解读',['查看政策详情']],['企业诊断','诊断',['查看诊断']],['申报材料','材料',['材料上传','材料智能生成']],['办理指引','指引',['进入办理指引']],['跳转官方平台','跳转',['点击前往']]];
 const DAYS = Array.from({length: 15}, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`);
+const SLOW_MS = 10000; /* 慢回复阈值（毫秒），阈值待技术确认 */
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* 漏斗几何：列头 76px + 间隔 16px = 92；绘图区 298px（柱最大 280，顶部留 18px 给柱顶胶囊） */
 const F_HEAD = 92, F_PLOT = 298, F_BAR = 280, F_BASE = 297;
@@ -163,7 +164,7 @@ function renderFunnel() {
   const cols = NODES.map((v, i) =>
     `<button type="button" class="funnel-col${i === funnelSel ? ' sel' : ''}" data-col="${i}" aria-label="${v}，到达 ${counts[i]} 家">
       <span class="fc-head"><span class="fc-name">${v}</span><span class="fc-num">${counts[i]}</span></span>
-      <span class="fc-plot"><i class="fc-bar" style="height:${h(i)}px"></i>${counts[i] ? `<i class="fc-mark" style="bottom:${h(i) + 11}px"></i>` : ''}</span>
+      <span class="fc-plot"><i class="fc-bar" style="height:${h(i)}px"></i></span>
     </button>`).join('');
   const polys = NODES.slice(0, -1).map((_, i) => {
     const x1 = i * 100 + 86, x2 = (i + 1) * 100;
@@ -225,7 +226,7 @@ function renderLeads() {
   const profile = filtered.filter(c => c.level >= 2).length;
   const leads = filtered.filter(c => ['高','中'].includes(c['意向等级'])).length;
   const deals = filtered.filter(c => c['成交服务']).length;
-  const rows = [['高意向','高','var(--stripe-pos-strong)'], ['中意向','中','var(--stripe-pos)'], ['低意向','低','var(--stripe-neutral)']]
+  const rows = [['高意向','高','var(--fill-pos-strong)'], ['中意向','中','var(--fill-pos)'], ['低意向','低','var(--fill-neutral)']]
     .map(([label, key, grad]) => {
       const count = filtered.filter(c => c['意向等级'] === key).length;
       return `<div class="lead-row"><div class="lr-top"><span class="lr-label">${label}</span><span class="lr-val">${count} 家</span></div>
@@ -235,7 +236,7 @@ function renderLeads() {
     `<div class="leads-big"><span class="big big72">${pct(leads, profile)}</span><span class="north">北极星</span></div>
      <div class="leads-div"></div>${rows}
      <div class="lead-foot">服务转化率 ${deals ? pct(deals, leads) : '—'} · 业务回填</div>
-     <p class="lead-rule">高：点过服务、找过人工，或选了政策且缺条件；中：看过 2 条以上政策，或进了办理指引没去官方平台；14 天无操作降一级</p>`;
+     <p class="lead-rule">高：点过服务、找过人工，或选了政策且缺条件；中：看过 2 条以上政策、点过“去XX”，或进了办理指引没点“去XX”；14 天无操作降一级</p>`;
 }
 
 /* ---------- 每日进入企业 ---------- */
@@ -275,8 +276,8 @@ function renderDaily() {
     `<div class="chart-body">
       <div class="chart">
         <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-          <defs><pattern id="dstripe" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="1" height="4" style="fill: var(--c-pos)" opacity=".15"/></pattern></defs>
-          <path d="${area}" fill="url(#dstripe)"/>
+          <defs><linearGradient id="dfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--c-pos)" stop-opacity=".18"/><stop offset="1" style="stop-color: var(--c-pos)" stop-opacity="0"/></linearGradient></defs>
+          <path d="${area}" fill="url(#dfade)"/>
           <path d="${line}" fill="none" style="stroke: var(--c-pos)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
           <circle cx="${x(peak)}" cy="${y(max)}" r="4" style="fill: var(--c-pos-strong)" vector-effect="non-scaling-stroke"/>
         </svg>
@@ -406,7 +407,7 @@ function renderNurture() {
      <div class="nr-track"><i style="width:${ns.length ? val / ns.length * 100 : 0}%;background:${grad}"></i></div></div>`;
   $('#nurture').innerHTML =
     `<div class="nurture-big"><span class="big big72">${ns.length}</span><span class="unit">家</span></div>
-     ${ns.length ? '<div class="nurture-rows">' + bar('已授权', a, 'var(--stripe-pos)') + bar('未授权', b, 'var(--stripe-neutral)') + '</div>' : ''}
+     ${ns.length ? '<div class="nurture-rows">' + bar('已授权', a, 'var(--fill-pos)') + bar('未授权', b, 'var(--fill-neutral)') + '</div>' : ''}
      <button type="button" class="pill-dark" id="view-nurture">查看名单</button>`;
 }
 
@@ -451,18 +452,61 @@ function processMetrics() {
   const is = (e, cn, en, values) => values.includes(f(e, cn, en));
   const match = get('匹配完成'), relaxed = match.filter(e => f(e, '是否放宽', 'relaxed') === true);
   const mats = get('材料智能生成'), shown = get('服务入口展示');
-  const stars = get('满意度评价').filter(e => Number.isFinite(Number(f(e, '星级', 'stars'))));
+  const fb = get('满意度评价');
+  const likes = fb.filter(e => is(e, '操作', 'action', ['点赞', 'like'])).length;
+  const dislikes = fb.filter(e => is(e, '操作', 'action', ['点踩', 'dislike'])).length;
   const unique = es => new Set(es.map(e => e['企业名称'])).size;
+  /* 智能体质量：方案 3.1 “质量”类口径 */
+  const replies = get('智能体回复');
+  const replyErr = e => is(e, '结果', 'result', ['超时', '报错', 'timeout', 'error']);
+  const errors = replies.filter(replyErr).length;
+  const slow = replies.filter(e => Number(f(e, '耗时毫秒', 'latency_ms')) > SLOW_MS).length;
+  const degraded = replies.filter(e => is(e, '结果', 'result', ['降级展示', 'degraded']) || f(e, '兜底提示', 'fallback_notice') === true).length;
+  let prefilled = 0, kept = 0;
+  for (const e of get('画像确认')) {
+    const p = f(e, '预填字段', 'prefilled_fields'), c = f(e, '用户改过的字段', 'corrected_fields');
+    const n = Array.isArray(p) ? p.length : 0;
+    prefilled += n;
+    kept += Math.max(0, n - (Array.isArray(c) ? c.length : 0));
+  }
+  let gapUnknown = 0, gapTotal = 0;
+  for (const e of get('条件自检完成')) {
+    const items = f(e, '对照项', 'items');
+    if (!Array.isArray(items)) continue;
+    for (const it of items) {
+      gapTotal++;
+      if (it && ['未知', 'unknown'].includes(it['状态'] ?? it.status)) gapUnknown++;
+    }
+  }
+  const sessions = new Map(); /* 出错后流失率：按企业 + 会话分组 */
+  for (const e of valid) {
+    const key = e['企业名称'] + '｜' + (e['会话'] || '');
+    (sessions.get(key) || sessions.set(key, []).get(key)).push(e);
+  }
+  let errSess = 0, lostSess = 0;
+  for (const list of sessions.values()) {
+    if (!list.some(replyErr)) continue;
+    errSess++;
+    const last = [...list].sort((a, b) => String(a['事件时间']).localeCompare(String(b['事件时间']))).at(-1);
+    if (replyErr(last)) lostSess++;
+  }
   return [
     ['无匹配率', match.filter(e => Number(f(e, '结果数', 'result_count')) === 0).length, match.length, '结果数为 0 ÷ 匹配完成'],
     ['放宽后有结果率', relaxed.filter(e => f(e, '结果数', 'result_count') > 0).length, relaxed.length, '放宽后有结果 ÷ 放宽匹配'],
     ['平均匹配政策数', match.reduce((s, e) => s + (Number(f(e, '结果数', 'result_count')) || 0), 0), match.length, '匹配结果数平均值', 'avg'],
     ['匹配结果点击率', get('查看政策详情').length, get('政策列表曝光').length, '查看政策详情 ÷ 政策列表曝光'],
     ['材料生成失败率', mats.filter(e => !is(e, '结果', 'result', ['成功', 'success'])).length, mats.length, '生成失败 ÷ 材料智能生成'],
-    ['跳转成功率', get('跳转结果').filter(e => is(e, '结果', 'result', ['已打开', 'opened'])).length, get('确认跳转').filter(e => is(e, '操作', 'action', ['确认', 'confirm'])).length, '已打开 ÷ 确认跳转'],
+    ['跳转成功率', get('跳转结果').filter(e => is(e, '结果', 'result', ['已打开', 'opened'])).length, get('点击前往').filter(e => is(e, '目标类型', 'target_type', ['政府网站', 'website']) && is(e, '弹窗选择', 'popup_action', ['确认', 'confirm'])).length, '已打开 ÷ 网站类弹窗确认的点击前往'],
     ['服务入口点击率', get('服务入口点击').length, shown.length, '点击 ÷ 服务入口展示'],
     ['服务触达打扰率', unique(valid.filter(e => e['事件'] === '暂不需要' || e['事件'] === '触达授权变更' && is(e, '操作', 'action', ['关闭', 'revoke']))), unique(shown), '拒绝或关闭企业 ÷ 展示企业'],
-    ['用户满意度', stars.reduce((s, e) => s + Number(f(e, '星级', 'stars')), 0), stars.length, `共 ${stars.length} 条评价`, 'stars']
+    ['点赞率', likes, likes + dislikes, `共 ${likes + dislikes} 条评价`],
+    ['智能体出错率', errors, replies.length, '超时或报错 ÷ 智能体回复总数'],
+    ['慢回复占比', slow, replies.length, `耗时超过 ${SLOW_MS / 1000} 秒 ÷ 回复总数`],
+    ['降级与兜底率', degraded, replies.length, '降级展示或兜底提示 ÷ 回复总数'],
+    ['重新生成率', get('重新生成').length, replies.length, '重新生成 ÷ 智能体回复总数'],
+    ['识别准确率', kept, prefilled, '预填后没被改 ÷ 预填字段数'],
+    ['数据缺口率', gapUnknown, gapTotal, '状态未知 ÷ 对照项总数'],
+    ['出错后流失率', lostSess, errSess, '出错后本会话无后续事件 ÷ 出错会话数']
   ];
 }
 function renderProcess() {
@@ -474,7 +518,7 @@ function renderProcess() {
     return label === '跳转成功率' ? ratio < 0.9 : ratio > 0.1 && (label !== '服务触达打扰率' || ratio > 0.2);
   };
   $('#process').innerHTML = processMetrics().map(([label, a, b, desc, type]) => {
-    const val = b ? (type ? (a / b).toFixed(1) + (type === 'stars' ? ' 星' : '') : pct(a, b)) : '—';
+    const val = b ? (type ? (a / b).toFixed(1) : pct(a, b)) : '—';
     const neg = b && isBad(label, a / b);
     return `<div><h4>${label}</h4><strong class="${neg ? 'neg' : ''}">${val}</strong><small>${b ? desc : '暂无相关事件'}</small></div>`;
   }).join('');
@@ -627,7 +671,7 @@ function csvFeatures() {
 }
 function csvProcess() {
   if (!data.hasEvents) return [['过程指标', '暂无事件数据']];
-  const fmt = ([label, a, b, desc, type]) => [label, b ? (type ? (a / b).toFixed(1) + (type === 'stars' ? ' 星' : '') : pct(a, b)) : '—', desc];
+  const fmt = ([label, a, b, desc, type]) => [label, b ? (type ? (a / b).toFixed(1) : pct(a, b)) : '—', desc];
   return [['指标', '数值', '口径'], ...processMetrics().map(fmt)];
 }
 const MENUS = {
