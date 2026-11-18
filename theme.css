@@ -1,0 +1,46 @@
+/* 运营看板主题
+   想换颜色，只改下面 8 个 --base-* 变量；保存后刷新页面即可。
+   （第二层语义变量由这 8 个派生，一般不用动。） */
+
+:root{
+  /* ---- 第一层：基础色板 ---- */
+  --base-navy:       #13235f;  /* 洞察卡深蓝：标题墨色、最深的正向色 */
+  --base-blue:       #3b63d6;  /* 洞察卡主蓝：正向主色 */
+  --base-sky:        #dfe6fb;  /* 浅蓝：正向浅底、悬停高亮 */
+  --base-orange:     #ee8a3a;  /* 洞察卡橙：负向主色（图形用） */
+  --base-orange-ink: #b4561a;  /* 深橙：负向文字（保证对比度） */
+  --base-peach:      #f6e1cf;  /* 洞察卡浅杏：负向浅底 */
+  --base-gray:       #8a90a0;  /* 中性 */
+  --base-canvas:     #efeff1;  /* 页面背景 */
+
+  /* ---- 第二层：语义变量（组件只用这一层） ---- */
+  --c-ink:        var(--base-navy);                                        /* 标题、大数字、主按钮底 */
+  --c-text:       color-mix(in srgb, var(--base-navy) 75%, white);         /* 正文 */
+  --c-muted:      color-mix(in srgb, var(--base-gray) 70%, black);         /* 次要文字（加深到对比度 ≥4.5:1） */
+  --c-canvas:     var(--base-canvas);                                      /* 页面背景 */
+  --c-widget:     color-mix(in srgb, white 45%, var(--base-canvas));       /* 组件底色 */
+  --c-chip:       color-mix(in srgb, white 60%, var(--base-canvas));       /* 胶囊/提示/表头吸顶白底 */
+  --c-hover:      var(--base-sky);                                         /* 行悬停 */
+  --c-hair:       color-mix(in srgb, var(--base-canvas) 88%, black);       /* 组件内分隔线 */
+  --c-widget-line: color-mix(in srgb, var(--base-canvas) 92%, black);      /* 组件 1px 描边 */
+  --c-pos:        var(--base-blue);                                        /* 正向主色：漏斗柱、进度条、点阵、已授权文字 */
+  --c-pos-strong: var(--base-navy);                                        /* 最强正向：高意向、已成交、峰值点 */
+  --c-pos-soft:   var(--base-sky);                                         /* 正向浅底：漏斗选中列高亮、行悬停 */
+  --c-neg:        var(--base-orange);                                      /* 负向图形：漏斗流失斜坡、卡住条 */
+  --c-neg-text:   var(--base-orange-ink);                                  /* 负向文字：卡住数、低转化率、培育候选 */
+  --c-neg-soft:   var(--base-peach);                                       /* 负向浅底：底部“停在这里”说明带 */
+  --c-neutral:    color-mix(in srgb, var(--base-gray) 70%, black);         /* 未授权、低意向、产品侧卡点、为 0 */
+  --c-danger:     var(--base-orange-ink);                                  /* 报错文字 */
+  --c-insight-a:  var(--base-orange);                                      /* 洞察卡渐变色停 1 */
+  --c-insight-b:  var(--base-blue);                                        /* 洞察卡渐变色停 2 */
+  --c-insight-c:  var(--base-navy);                                        /* 洞察卡渐变色停 3 */
+
+  /* ---- 派生：斜纹、阴影等（一律从语义变量 color-mix 派生） ---- */
+  --stripe-pos-strong: repeating-linear-gradient(120deg, var(--c-pos-strong) 0 3px, color-mix(in srgb, var(--c-pos-strong) 45%, white) 3px 6px);  /* 高意向条 */
+  --stripe-pos:        repeating-linear-gradient(120deg, var(--c-pos) 0 3px, color-mix(in srgb, var(--c-pos) 45%, white) 3px 6px);                /* 中意向、企业侧卡点、功能使用、商机候选条 */
+  --stripe-neutral:    repeating-linear-gradient(120deg, var(--c-neutral) 0 3px, color-mix(in srgb, var(--c-neutral) 45%, white) 3px 6px);        /* 低意向、未授权条 */
+  --stripe-neg:        repeating-linear-gradient(120deg, var(--c-neg) 0 3px, color-mix(in srgb, var(--c-neg) 45%, white) 3px 6px);                /* 产品侧卡点条 */
+  --shadow-widget: 0 1px 2px color-mix(in srgb, black 4%, transparent), 0 8px 24px color-mix(in srgb, black 4%, transparent);  /* 组件阴影 */
+  --shadow-pop: 0 8px 24px color-mix(in srgb, black 12%, transparent);                    /* 浮层/提示阴影 */
+  --shadow-drawer: -16px 0 48px color-mix(in srgb, black 12%, transparent);               /* 抽屉阴影 */
+}

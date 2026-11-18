@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>惠企政策智能体 · 运营看板</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="empty-mode">
+<main>
+  <header class="page-head">
+    <div class="head-left">
+      <div class="title-row">
+        <h1>运营看板</h1>
+        <button id="copy-link" class="icon-circle" type="button" title="复制页面链接" aria-label="复制页面链接">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </button>
+      </div>
+      <p id="meta"></p>
+    </div>
+    <div class="head-controls" id="head-controls" hidden>
+      <span class="cap period" id="period">
+        <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+        <span id="period-text">—</span>
+      </span>
+      <select id="region" class="cap select" aria-label="所在地区"><option value="">全部地区</option></select>
+      <div class="seg-cap" role="group" aria-label="意向等级">
+        <button type="button" data-intent="高" aria-pressed="false">高</button>
+        <button type="button" data-intent="中" aria-pressed="false">中</button>
+        <button type="button" data-intent="低" aria-pressed="false">低</button>
+      </div>
+      <select id="auth" class="cap select" aria-label="触达授权"><option value="">全部</option><option>已授权</option><option>未授权</option></select>
+      <button class="btn-dark" data-import type="button">
+        <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v15"/></svg>导入 Excel
+      </button>
+      <a class="cap light" href="assets/惠企政策智能体-运营导出模版.xlsx" download>下载模版<svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg></a>
+    </div>
+  </header>
+  <input id="file" type="file" accept=".xlsx" hidden>
+  <div id="error" role="alert" hidden></div>
+
+  <section id="empty" class="empty">
+    <div class="empty-grid">
+      <div class="empty-left">
+        <h2>运营看板</h2>
+        <p class="empty-desc">导入后台导出的 Excel，看用户卡在哪、该跟进谁。</p>
+        <div class="empty-actions">
+          <button class="btn-dark lg" data-import type="button">
+            <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v15"/></svg>导入 Excel
+          </button>
+          <button class="text-btn" id="sample" type="button">用示例数据看看</button>
+        </div>
+      </div>
+      <div class="widget empty-preview" aria-hidden="true">
+        <div class="widget-head"><h3>用户旅程漏斗</h3></div>
+        <div class="ph-funnel">
+          <div class="ph-col"><span class="ph-num">—</span><span class="ph-name">进入</span><i style="height:260px"></i></div>
+          <div class="ph-col"><span class="ph-num">—</span><span class="ph-name">画像确认</span><i style="height:215px"></i></div>
+          <div class="ph-col"><span class="ph-num">—</span><span class="ph-name">匹配完成</span><i style="height:205px"></i></div>
+          <div class="ph-col"><span class="ph-num">—</span><span class="ph-name">看政策</span><i style="height:160px"></i></div>
+          <div class="ph-col"><span class="ph-num">—</span><span class="ph-name">选定政策</span><i style="height:110px"></i></div>
+          <div class="ph-col"><span class="ph-num">—</span><span class="ph-name">准备材料</span><i style="height:75px"></i></div>
+          <div class="ph-col"><span class="ph-num">—</span><span class="ph-name">办理指引</span><i style="height:65px"></i></div>
+          <div class="ph-col"><span class="ph-num">—</span><span class="ph-name">前往官方平台</span><i style="height:40px"></i></div>
+        </div>
+        <p class="ph-note">导入后这里会显示用户旅程漏斗</p>
+      </div>
+    </div>
+    <div class="empty-chips">
+      <span class="soft-chip">需包含企业明细表</span>
+      <span class="soft-chip">数据不上传</span>
+      <span class="soft-chip">刷新后需重新导入</span>
+    </div>
+  </section>
+
+  <div id="dashboard" hidden>
+    <section class="grid12 first-screen">
+      <div class="widget s-funnel">
+        <div class="widget-head">
+          <h3>用户旅程漏斗</h3>
+          <button class="menu-btn" data-menu="funnel" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        </div>
+        <div id="funnel"></div>
+      </div>
+      <div class="widget s-leads">
+        <div class="widget-head">
+          <h3>线索有效率</h3>
+          <button class="menu-btn" data-menu="leads" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        </div>
+        <div id="leads"></div>
+      </div>
+      <div class="widget s-daily">
+        <div class="widget-head">
+          <h3>每日进入企业</h3>
+          <button class="menu-btn" data-menu="daily" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        </div>
+        <div id="daily"></div>
+      </div>
+      <div class="stack s-stack">
+        <div class="widget">
+          <div class="widget-head">
+            <h3>事件量</h3>
+            <button class="menu-btn" data-menu="events" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+          </div>
+          <div id="events"></div>
+        </div>
+        <div class="widget">
+          <div class="widget-head">
+            <h3>商机企业</h3>
+            <button class="menu-btn" data-menu="opp-dots" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+          </div>
+          <div id="opp-dots"></div>
+        </div>
+      </div>
+      <div class="widget insight s-insight">
+        <span class="insight-tag"><svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></svg>洞察</span>
+        <button class="menu-btn on-dark" data-menu="insight" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        <div id="insight-slide" class="insight-slide" aria-live="polite"></div>
+        <div id="insight-segs" class="insight-segs"></div>
+      </div>
+    </section>
+
+    <section class="grid12">
+      <div class="widget s8">
+        <div class="widget-head">
+          <h3>卡点分布</h3>
+          <button class="menu-btn" data-menu="blocks" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        </div>
+        <div id="blocks"></div>
+      </div>
+      <div class="widget s4">
+        <div class="widget-head">
+          <h3>长期培育候选</h3>
+          <button class="menu-btn" data-menu="nurture" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        </div>
+        <div id="nurture"></div>
+      </div>
+      <div class="widget s12">
+        <div class="widget-head">
+          <h3>商机分布</h3>
+          <button class="menu-btn" data-menu="opps" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        </div>
+        <div id="opportunities" class="table-scroll"></div>
+      </div>
+      <div class="widget s12" id="detail">
+        <div class="widget-head">
+          <h3>企业明细</h3>
+          <span id="count" class="head-count"></span>
+          <button class="menu-btn" data-menu="detail" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        </div>
+        <div class="detail-controls">
+          <div id="chips" class="chips"></div>
+          <div class="detail-tools">
+            <button id="code-btn" class="cap small" aria-expanded="false" aria-haspopup="true">卡点编码<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+            <div class="search-box">
+              <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input id="search" placeholder="搜索企业名称" aria-label="搜索企业名称" type="search">
+            </div>
+          </div>
+        </div>
+        <div id="company-table" class="table-wrap"></div>
+        <div id="pagination" class="pagination"></div>
+      </div>
+      <div class="widget s6">
+        <div class="widget-head">
+          <h3>功能使用</h3>
+          <button class="menu-btn" data-menu="features" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        </div>
+        <div id="features"></div>
+      </div>
+      <div class="widget s6">
+        <div class="widget-head">
+          <h3>过程指标</h3>
+          <button class="menu-btn" data-menu="process" type="button" aria-haspopup="menu" aria-label="组件菜单"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+        </div>
+        <div id="process" class="process"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="code-popover" class="menu-pop" hidden></div>
+<div id="widget-menu" class="menu-pop" hidden></div>
+<div id="toast" class="toast" role="status"></div>
+<div id="drag" hidden><span class="pill-dark">松开导入</span></div>
+<div id="tooltip" class="tooltip" role="tooltip"></div>
+<div id="drawer-mask" class="drawer-mask"><aside id="drawer" class="drawer" role="dialog" aria-modal="true" aria-label="企业详情"></aside></div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
