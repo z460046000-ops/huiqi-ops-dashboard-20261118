@@ -7,9 +7,11 @@ const NODES = ['进入','画像确认','匹配完成','看政策','选定政策'
 const CODES = Object.fromEntries(
   ['画像放弃','查不到企业','无匹配结果','地区未覆盖','结果不吸引','生成失败','链接失效','低满意度','数据缺口']
     .map((v,i)=>['P'+String(i+1).padStart(2,'0'),v])
-    .concat(['专利不足','软著不足','研发条件不足','缺少资质','材料写不出','不会办理','未注册企业','通过率过低','缺体系认证','经营异常','申报窗口未到','规模或营收不达标']
+    .concat(['专利不足','软著不足','研发条件不足','缺少资质','材料写不出','不会办理','未注册企业','匹配度低','缺体系认证','经营异常','申报窗口未到','规模或营收不达标']
       .map((v,i)=>['B'+String(i+1).padStart(2,'0'),v])));
-const REQUIRED = '企业名称、所在地区、所属行业（国标代码）、企业规模、成立年限、企业类型、画像完整度、首次使用时间、最近使用时间、会话数、用过的功能、最远节点、卡点节点、卡点编码、主要缺口、推荐类目、推荐服务（服务名｜服务 ID）、长期培育候选、意向等级、触达授权、联系手机号、跟进人、跟进日期、跟进结果、成交服务、成交金额（元）'.split('、');
+const REQUIRED = '企业名称、所在地区、所属行业（3～4 级）、企业规模、成立年限、企业类型、画像完整度、首次使用时间、最近使用时间、会话数、用过的功能、最远节点、卡点节点、卡点编码、主要缺口、推荐类目、推荐服务（服务名｜服务 ID）、长期培育候选、意向等级、触达授权、联系手机号、跟进人、跟进日期、跟进结果、成交服务、成交金额（元）'.split('、');
+/* 旧模版列名兼容：导入旧文件时按别名归一成新列名（2026-11-20 口径） */
+const ALIASES = { '所属行业（3～4 级）': '所属行业（国标代码）', '最高匹配度': '最高预估通过率', '选定政策匹配度': '选定政策预估通过率' };
 const FEATURES = [['企业画像','画像',['画像确认']],['政策匹配','匹配',['匹配完成']],['政策解读','解读',['查看政策详情']],['企业诊断','诊断',['查看诊断']],['申报材料','材料',['材料上传','材料智能生成']],['办理指引','指引',['进入办理指引']],['跳转官方平台','跳转',['点击前往']]];
 const DAYS = Array.from({length: 15}, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`);
 const SLOW_MS = 10000; /* 慢回复阈值（毫秒），阈值待技术确认 */
@@ -69,6 +71,12 @@ function parse(buffer) {
   if (signature[0] !== 80 || signature[1] !== 75) throw Error('invalid xlsx');
   const w = XLSX.read(buffer, { type: 'array' }), c = readSheet(w, '企业明细');
   if (!c) throw Error('导入文件里没有「企业明细」表，此处无数据');
+  for (const [cur, old] of Object.entries(ALIASES)) {
+    if (!c.headers.includes(cur) && c.headers.includes(old)) {
+      c.headers[c.headers.indexOf(old)] = cur;
+      c.rows.forEach(r => { r[cur] = r[old]; delete r[old]; });
+    }
+  }
   const absent = REQUIRED.filter(h => !c.headers.includes(h));
   if (absent.length) throw Error('企业明细缺少以下列：' + absent.join('、') + '，请用最新导入模版导出');
   const events = readSheet(w, '事件明细'), gaps = readSheet(w, '条件缺口明细');
@@ -475,7 +483,8 @@ function processMetrics() {
     if (!Array.isArray(items)) continue;
     for (const it of items) {
       gapTotal++;
-      if (it && ['未知', 'unknown'].includes(it['状态'] ?? it.status)) gapUnknown++;
+      /* 只统计「待补充」（企业缺这项数据）；旧文件里的「未知」等同待补充，「待确认」（政策写得不清楚）不计 */
+      if (it && ['待补充', '未知', 'unknown', 'missing'].includes(it['状态'] ?? it.status)) gapUnknown++;
     }
   }
   const sessions = new Map(); /* 出错后流失率：按企业 + 会话分组 */
@@ -505,7 +514,7 @@ function processMetrics() {
     ['降级与兜底率', degraded, replies.length, '降级展示或兜底提示 ÷ 回复总数'],
     ['重新生成率', get('重新生成').length, replies.length, '重新生成 ÷ 智能体回复总数'],
     ['识别准确率', kept, prefilled, '预填后没被改 ÷ 预填字段数'],
-    ['数据缺口率', gapUnknown, gapTotal, '状态未知 ÷ 对照项总数'],
+    ['数据缺口率', gapUnknown, gapTotal, '状态待补充 ÷ 对照项总数'],
     ['出错后流失率', lostSess, errSess, '出错后本会话无后续事件 ÷ 出错会话数']
   ];
 }
@@ -559,7 +568,7 @@ function renderDetail() {
     headers.map(h => `<th>${sortKeys[h] ? `<button type="button" data-sort="${sortKeys[h]}">${h} ${sortIcon(sortKeys[h])}</button>` : h}</th>`).join('') +
     '</tr></thead><tbody>' +
     cs.slice((page - 1) * 20, page * 20).map(c => {
-      const sub = [c['所在地区'], c['所属行业（国标代码）']].filter(Boolean).join(' · ');
+      const sub = [c['所在地区'], c['所属行业（3～4 级）']].filter(Boolean).join(' · ');
       const intent = c['意向等级'];
       const dot = `<span class="dot ${intent === '高' ? 'hi' : intent === '中' ? 'md' : 'lo'}"></span>${esc(intent)}`;
       return `<tr tabindex="0" data-company="${data.companies.indexOf(c)}" aria-label="${esc(name(c))}">` +
@@ -785,10 +794,10 @@ function drawerContent(c) {
   <div class="drawer-head">
     <button type="button" id="drawer-close" aria-label="关闭">${icon('close', 16)}</button>
     <h2>${esc(name(c))}</h2>
-    <p class="d-meta">${['所在地区','所属行业（国标代码）','企业规模','成立年限','企业类型'].map(k => esc(c[k]) || '—').join(' · ')}</p>
+    <p class="d-meta">${['所在地区','所属行业（3～4 级）','企业规模','成立年限','企业类型'].map(k => esc(c[k]) || '—').join(' · ')}</p>
     ${status}
   </div>
-  <div class="d-section"><h3>概况</h3>${kv(['意向等级','触达授权','长期培育候选','最远节点','卡点节点','画像完整度','会话数','首次使用时间','最近使用时间', ...['专利数','软著数','研发人员','匹配政策数','最高预估通过率','选定政策','选定政策预估通过率','点过服务入口','选过“暂不需要”'].filter(k => k in c)])}</div>
+  <div class="d-section"><h3>概况</h3>${kv(['意向等级','触达授权','长期培育候选','最远节点','卡点节点','画像完整度','会话数','首次使用时间','最近使用时间', ...['专利数','软著数','研发人员','匹配政策数','最高匹配度','选定政策','选定政策匹配度','点过服务入口','选过“暂不需要”'].filter(k => k in c)])}</div>
   <div class="d-section"><h3>卡点</h3>${c.codes.map(k => `<div class="code-line">${codeChip(k)}<span>${codeName(k)}</span><span class="side">${k.startsWith('P') ? '产品侧' : '企业侧'}</span></div>`).join('') || '<p>没有卡点记录</p>'}</div>
   <div class="d-section"><h3>条件缺口</h3>${!data.hasGaps ? missing('条件缺口明细') : gaps.length
     ? `<div class="table-scroll"><table class="d-table"><thead><tr>${gapCols.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${gaps.map(g => `<tr>${gapCols.map(k => k === '状态' ? `<td><span class="${g[k] === '可能不符' ? 'danger' : g[k] === '符合' ? 'success' : 'zero'}">${esc(g[k])}</span></td>` : `<td>${esc(g[k]) || '—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
